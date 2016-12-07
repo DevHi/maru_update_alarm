@@ -64,16 +64,16 @@ def properties(file_dir):  # Load/create properties file
         print(alert_info() + "Missing 'properties.json', Creating new file...")
         settings = open(file_dir + "\\properties.json", 'w')
         default_settings = {
-            'maru_auto_login': False,  # default: False
+            'maru_auto_login': False,  # Automatically log in to 'http://marumaru.in'. ( default: False )
             'maru_id': '',
             'maru_password': '',
-            'email_auto_login': False,  # default: False
+            'email_auto_login': False,  # Automatically log in to SMTP server. ( default: False )
             'email_full_address': '',
             'email_password': '',
-            'last_login': '',
+            'last_login': '',  # Recently logged in account
             'PhantomJS_directory': '',
-            'update_check_interval_in_second': 600,  # default: 600(10min)
-            'use_safe_password_input': True
+            'update_check_interval_in_second': 600,  # Set update checking interval. ( default: 600(10min) )
+            'use_safe_password_input': True  # Use 'getpass' when entering password. False if Windows. ( default: True )
         }
         data = json.dumps(default_settings, sort_keys=True, indent=4)
         settings.write(str(data))
@@ -96,16 +96,16 @@ def properties_writer(key, value, file_dir):  # Updates properties file
         print(alert_info() + "Missing 'properties.json', Creating new file...")
         settings = open(file_dir + "\\properties.json", 'w')
         default_settings = {
-            'maru_auto_login': False,  # default: False
+            'maru_auto_login': False,  # Automatically log in to 'http://marumaru.in'. ( default: False )
             'maru_id': '',
             'maru_password': '',
-            'email_auto_login': False,  # default: False
+            'email_auto_login': False,  # Automatically log in to SMTP server. ( default: False )
             'email_full_address': '',
             'email_password': '',
-            'last_login': '',
+            'last_login': '',  # Recently logged in account
             'PhantomJS_directory': '',
-            'update_check_interval_in_second': 600,  # default: 600(10min)
-            'use_safe_password_input': True
+            'update_check_interval_in_second': 600,  # Set update checking interval. ( default: 600(10min) )
+            'use_safe_password_input': True  # Use 'getpass' when entering password. False if Windows. ( default: True )
         }
         data = json.dumps(default_settings, sort_keys=True, indent=4)
         settings.write(str(data))
@@ -164,7 +164,7 @@ def maru_login(driver, url, settings, cur_dir, stat=True):  # Log in to 'http://
     if get_html(driver).select('div[class=login] a')[0].text == '나의계정':
         print(alert_info() + 'Successfully logged in.')
     elif get_html(driver).select('div[class=login] a')[0].text == '회원가입':
-        print(alert_error() + 'Log in failed')
+        print(alert_error() + 'Log in failed.')
         maru_login(driver, url, settings, cur_dir, stat=False)
 
     if settings['last_login'] == '':
@@ -184,7 +184,7 @@ def load_bookmark(driver):  # Load bookmark
     return list(json.loads(bookmark_list).keys())
 
 
-def update_list_creator(driver):  # get manga update list from 'http://marumaru.in/b/mangaup'
+def update_list_creator(driver):  # Get manga update list from 'http://marumaru.in/b/mangaup'
     update_raw = get_html(driver).select('#boardList table tbody tr[cid] div[cid]')
     update_link_raw = get_html(driver).select('#boardList table tbody tr[cid] a')
     update_titles = []
@@ -200,7 +200,7 @@ def update_list_creator(driver):  # get manga update list from 'http://marumaru.
     return dict(zip(update_titles, update_dates_links))
 
 
-def last_update_reader(bookmark, lastlogin, cur_dir):  # get last update
+def last_update_reader(bookmark, lastlogin, cur_dir):  # Get last update date log
     try:
         last_update = open(cur_dir + '\\lastupdate_{}.json'.format(lastlogin[1]), 'r', encoding='utf8')
         file_data = last_update.read()
@@ -231,13 +231,13 @@ def last_update_reader(bookmark, lastlogin, cur_dir):  # get last update
         return data
 
 
-def last_update_writer(update_list, lastlogin, cur_dir):
+def last_update_writer(update_list, lastlogin, cur_dir):  # Create last update date log
     last_update = codecs.open(cur_dir + '\\lastupdate_{}.json'.format(lastlogin[1]), 'w', 'utf-8')
     last_update.write(str(update_list))
     last_update.close()
 
 
-def email_login(settings, stat=True):
+def email_login(settings, stat=True):  # Get SMTP server log in info
     print(alert_info() + 'Log in to SMTP server')
     if stat is True:
         if settings['email_auto_login'] is True:
@@ -259,7 +259,7 @@ def email_login(settings, stat=True):
     return email, email_pw
 
 
-def email_sender(email, title, link, settings):
+def email_sender(email, update_list, settings):  # Send email notification
     smtp_info = {
         'gmail.com': ('smtp.gmail.com', 587),
         'naver.com': ('smtp.naver.com', 587),
@@ -293,11 +293,11 @@ def email_sender(email, title, link, settings):
     if rcode1 != 250:
         smtp.quit()
         print(alert_error() + 'Error sending notification: Connection ehlo() failed.')
-        return email_sender(email, title, link, settings)
+        return email_sender(email, update_list, settings)
     if rcode2 != 220:
         smtp.quit()
         print(alert_error() + 'Error sending notification: Starttls() failed.')
-        return email_sender(email, title, link, settings)
+        return email_sender(email, update_list, settings)
 
     try:
         rcode3, _ = smtp.login(email[0], email[1])
@@ -305,18 +305,23 @@ def email_sender(email, title, link, settings):
             smtp.quit()
             print(alert_error() + 'Error sending notification: Login failed.')
             new_email = email_login(settings, stat=False)
-            return email_sender(new_email, title, link, settings)
+            return email_sender(new_email, update_list, settings)
     except:
         smtp.quit()
         print(alert_error() + 'Error sending notification: Login failed.')
         print(alert_error() + 'Please check your email address and password, then restart the program.')
         return exit()
 
-    subject = "'{}' - update notification".format(title)
-    message = '''
-    There is a new update for '{}'!
-    Link -> {}
-    '''.format(re.search('(.*) \d*-?\d*[화권]?', title).group(1), link)
+    if len(update_list) == 1:
+        subject = "'{}' - update notification".format(update_list[0][0])
+    else:
+        subject = "'{}' and {} more.. - update notification".format(update_list[0][0], len(update_list) - 1)
+    message = ''
+    for t in update_list:
+        message += '''There is a new update for '{}'!
+Link -> {}
+
+'''.format(re.search('(.*) \d*-?\d*[화권]?', t[0]).group(1), t[1])
 
     msg = MIMEText(message.encode('utf-8'), _subtype='plain', _charset='utf-8')
     msg['Subject'] = Header(subject.encode('utf-8'), 'utf-8')
@@ -327,23 +332,27 @@ def email_sender(email, title, link, settings):
     smtp.quit()
 
 
-def update_checker(driver, url, email, settings, lastlogin, cur_dir):
+def update_checker(driver, url, email, settings, lastlogin, cur_dir):  # Check new updates
     bookmark = load_bookmark(driver)
     print(alert_info() + 'Bookmark loaded.')
     print(alert_info() + 'Checking updates...')
     driver.get(url)
     update_list = update_list_creator(driver)
     new_update_list = last_update_reader(bookmark, lastlogin, cur_dir)
+    message_update_list = []
     for title_raw in update_list.keys():
         title = re.search('(.*) \d*-?\d*[화권]?', title_raw).group(1)
         if title in bookmark:
             if update_list[title_raw][0] != new_update_list[title]:
                 new_update_list[title] = update_list[title_raw][0]
-                print(alert_info() + "New update found! '{}' Sending notification to '{}'...".format(title_raw, email[0]))
-                email_sender(email, title_raw, update_list[title_raw][1], settings)
+                print(alert_info() + "New update found! '{}'".format(title_raw))
+                message_update_list.append((title_raw, update_list[title_raw][1]))
             else:
                 print(alert_info() + 'No update found for {}'.format(title))
     last_update_writer(json.dumps(new_update_list, ensure_ascii=False, sort_keys=True, indent=4), lastlogin, cur_dir)
+    if len(message_update_list) > 0:
+        print(alert_info() + "Sending notification to '{}'...".format(email[0]))
+        email_sender(email, message_update_list, settings)
 
 
 if __name__ == '__main__':

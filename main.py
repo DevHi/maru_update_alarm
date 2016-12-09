@@ -1,3 +1,4 @@
+#! Python 3.5.2 :: Anaconda 4.1.1
 from selenium import webdriver
 import getpass
 import requests
@@ -48,6 +49,10 @@ def alert_info():  # Prefix format for information messages
 
 def alert_error():  # Prefix format for error messages
     return '[ERROR][{}] '.format(timer())
+
+
+def alert_warning():
+    return '[WARNING][{}] '.format(timer())
 
 
 def timer():  # Time prefix format for messages
@@ -144,16 +149,22 @@ def maru_login(driver, url, settings, cur_dir, stat=True):  # Log in to 'http://
             maru_id = settings['maru_id']
             maru_pw = settings['maru_password']
         else:
-            maru_id = input('ID: ')
             if settings['use_safe_password_input'] is True:
+                print(alert_info() + 'Safe log in is enabled.')
+                maru_id = input('ID: ')
                 maru_pw = getpass.getpass('Password: ')
             else:
+                print(alert_warning() + 'Safe log in is disabled.')
+                maru_id = input('ID: ')
                 maru_pw = input('Password: ')
     else:
-        maru_id = input('ID: ')
         if settings['use_safe_password_input'] is True:
+            print(alert_info() + 'Safe log in is enabled.')
+            maru_id = input('ID: ')
             maru_pw = getpass.getpass('Password: ')
         else:
+            print(alert_warning() + 'Safe log in is disabled.')
+            maru_id = input('ID: ')
             maru_pw = input('Password: ')
     print(alert_info() + 'Logging in...')
     driver.get(url)
@@ -249,16 +260,22 @@ def email_login(settings, stat=True):  # Get SMTP server log in info
             email = settings['email_full_address']
             email_pw = settings['email_password']
         else:
-            email = input('Enter email address: ')
             if settings['use_safe_password_input'] is True:
+                print(alert_info() + 'Safe log in is enabled.')
+                email = input('Enter email address: ')
                 email_pw = getpass.getpass('Enter email password: ')
             else:
+                print(alert_warning() + 'Safe log in is disabled.')
+                email = input('Enter email address: ')
                 email_pw = input('Enter email password: ')
     else:
-        email = input('Enter email address: ')
         if settings['use_safe_password_input'] is True:
+            print(alert_info() + 'Safe log in is enabled.')
+            email = input('Enter email address: ')
             email_pw = getpass.getpass('Enter email password: ')
         else:
+            print(alert_warning() + 'Safe log in is disabled.')
+            email = input('Enter email address: ')
             email_pw = input('Enter email password: ')
     return email, email_pw
 
@@ -351,12 +368,12 @@ def update_checker(driver, url, email, settings, lastlogin, cur_dir):  # Check n
                 new_update_list[title] = update_list[title_raw][0]
                 print(alert_info() + "New update found! '{}'".format(title_raw))
                 message_update_list.append((title_raw, update_list[title_raw][1]))
-            else:
-                print(alert_info() + 'No update found for {}'.format(title))
     last_update_writer(json.dumps(new_update_list, ensure_ascii=False, sort_keys=True, indent=4), lastlogin, cur_dir)
     if len(message_update_list) > 0:
         print(alert_info() + "Sending notification to '{}'...".format(email[0]))
         email_sender(email, message_update_list, settings)
+    else:
+        print(alert_info() + 'No update found.')
 
 
 if __name__ == '__main__':

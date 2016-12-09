@@ -50,7 +50,7 @@ def alert_error():  # Prefix format for error messages
     return '[ERROR][{}] '.format(timer())
 
 
-def timer():  # Time prefix format for all messages
+def timer():  # Time prefix format for messages
     t = time.localtime()
     return time.strftime('%Y-%m-%d %H:%M:%S', t)
 
@@ -123,11 +123,15 @@ def phantomjs_starter(driver_dir):  # PhantomJS initiator
 
 
 def url_request(url):  # Check website's status
-    r = requests.get(url)
-    return r.status_code
+    try:
+        r = requests.get(url)
+        return r.status_code
+    except ConnectionError:
+        print(alert_error() + 'Please check your Internet connectivity, then restart the program.')
+        return exit()
 
 
-def get_html(driver):  # get current page's html, convert into BeautifulSoup object
+def get_html(driver):  # Get current page's html, convert into BeautifulSoup object
     soup = bs(driver.page_source, 'lxml')
     return soup
 
